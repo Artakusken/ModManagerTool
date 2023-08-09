@@ -1,11 +1,11 @@
-import sqlite3
 from ModWidget import *
 from typing import Union
 
 
-def connect_base(lang) -> Union[str, sqlite3.Connection]:
-    con = sqlite3.connect("MMT_workbase.sqlite")
+def connect_base(database_name: str, lang: str) -> Union[str, sqlite3.Connection]:
+    """ Creates a database connection, returns feedback in case of an error """
     try:
+        con = sqlite3.connect(database_name)
         con.cursor()
         return con
     except Exception as error:
@@ -22,9 +22,9 @@ class Game:
         self.mods = []
         self.button = button
 
-    def import_mods(self, app):
+    def import_mods(self, database_name: str, app):
         """ Gets all mods from a base by game_id (if id of a game == game_ifd of a mod) """
-        con = connect_base("No_lang")
+        con = connect_base(database_name, "No_lang")
         if type(con) == sqlite3.Connection:
             cur = con.cursor()
             all_mod_args = cur.execute("""SELECT * FROM Mods WHERE Game_ID = ?""", (self.id,)).fetchall()
@@ -48,9 +48,9 @@ class Game:
         else:
             print(con)
 
-    def update_title(self, new_title: str):
+    def update_title(self, database_name: str, new_title: str):
         """ Renames game in a database. Executes sql query """
-        con = connect_base("No_lang")
+        con = connect_base(database_name, "No_lang")
         if type(con) == sqlite3.Connection:
             cur = con.cursor()
             cur.execute('''UPDATE Games

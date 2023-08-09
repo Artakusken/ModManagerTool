@@ -3,8 +3,81 @@ from PyQt5.QtWidgets import QApplication, QMainWindow
 from PyQt5 import uic
 from GameClass import *
 
+# ↓ SQL base design in dictionary
+SQL_BASE = {"Games": {0: ('Game_ID', 'INTEGER', 0, None, 1),
+                      1: ('Game_title', 'TEXT', 0, None, 0)},
+            "Mods": {0: ('Mod_ID', 'INTEGER', 0, None, 1),
+                     1: ('Game_ID', 'INTEGER', 0, None, 0),
+                     2: ('Title', 'TEXT', 0, None, 0),
+                     3: ('Tags', 'TEXT', 0, None, 0),
+                     4: ('Mversion', 'TEXT', 0, None, 0),
+                     5: ('Gversion', 'TEXT', 0, None, 0),
+                     6: ('Requirements', 'NUMERIC', 0, None, 0),
+                     7: ('Filepath', 'TEXT', 0, None, 0),
+                     8: ('Incompatible', 'TEXT', 0, None, 0),
+                     9: ('Commentary', 'TEXT', 0, None, 0),
+                     10: ('IMG_Path', 'TEXT', 0, None, 0)},
+            "sqlite_sequence": {0: ('name', '', 0, None, 0),
+                                1: ('seq', '', 0, None, 0)}}
+
+
+def check_database(database: str) -> bool:
+    """ Scans the database and checks if it is configured correctly """
+    try:
+        conn = sqlite3.connect(database)
+        cur = conn.cursor()
+        tables = cur.execute(""" SELECT name FROM sqlite_master WHERE type = 'table' """)
+        if len(tables.fetchall()) != 3:
+            conn.close()
+            return False
+        for table in tables.fetchall():
+            table = table[0]
+            if table in ("Games", "Mods", "sqlite_sequence"):
+                data = cur.execute(f"""PRAGMA table_info({table})""").fetchall()
+                for column_index in range(len(data)):
+                    if data[column_index][1::] != SQL_BASE[table][column_index]:
+                        print("ERROR")
+                        conn.close()
+                        return False
+        conn.close()
+        return True
+    except Exception as e:
+        print(e)
+        return False
+
+
+def create_database():
+    """ Creates new database """
+    try:
+        conn = sqlite3.connect('MMT_workbase.sqlite')
+        cur = conn.cursor()
+        cur.execute(""" CREATE TABLE "Games" (
+                            "Game_ID"	INTEGER,
+                            "Game_title"	TEXT,
+                            PRIMARY KEY("Game_ID" AUTOINCREMENT)
+                        ); """)
+        cur.execute(""" CREATE TABLE "Mods" (
+                            "Mod_ID"	INTEGER,
+                            "Game_ID"	INTEGER,
+                            "Title"	TEXT,
+                            "Tags"	TEXT,
+                            "Mversion"	TEXT,
+                            "Gversion"	TEXT,
+                            "Requirements"	NUMERIC,
+                            "Filepath"	TEXT,
+                            "Incompatible"	TEXT,
+                            "Commentary"	TEXT,
+                            "IMG_Path"	TEXT,
+                            PRIMARY KEY("Mod_ID" AUTOINCREMENT)
+                        );""")
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(e)
+
 
 class CrashWindow(QMainWindow):
+    """ A small window that informs the user about app crash and its cause """
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Crash")
@@ -19,7 +92,7 @@ class CrashWindow(QMainWindow):
 
 class MainWindow(QMainWindow):
     """ Application's main window """
-    def __init__(self):
+    def __init__(self, database: tuple):
         super().__init__()
 
         try:
@@ -51,7 +124,9 @@ class MainWindow(QMainWindow):
             uic.loadUi('MMT_EN.ui', self)
             self.ENLang.setChecked(True)
             self.game_label = "Game:"
-
+        self.database_name = database[0]
+        if database[1]:  # new database
+            self.informationText.setText(self.errors_notes["new_database"])
         self.games_counter = 0  # used as text when new game button is created
         self.games_titles_list = []  # list of all game titles
         self.games = []  # list of 'Game' classes
@@ -116,7 +191,7 @@ class MainWindow(QMainWindow):
 
     def import_games(self) -> None:
         """ Retrieves info from the database and creates game classes along with buttons """
-        con = connect_base(self.lang)
+        con = connect_base(self.database_name, self.lang)
         if type(con) == sqlite3.Connection:
             cur = con.cursor()
             games = cur.execute("""SELECT * FROM Games""").fetchall()
@@ -133,7 +208,7 @@ class MainWindow(QMainWindow):
             imported_game = Game(new_game_button)  # game class
             imported_game.title = game[1]
             imported_game.id = game[0]
-            imported_game.import_mods(self)
+            imported_game.import_mods(self.database_name, self)
             self.games.append(imported_game)
             self.games_titles_list.append(imported_game.title)
 
@@ -142,7 +217,7 @@ class MainWindow(QMainWindow):
         new_game_title = self.gameLineEdit.text()  # new title from gameLineEdit
         if self.chosen_game:  # game that will be renamed
             if new_game_title not in self.games_titles_list:  # check repetition
-                self.chosen_game.update_title(new_game_title)
+                self.chosen_game.update_title(self.database_name, new_game_title)
                 self.chosen_game.button.setText(new_game_title)
                 self.games_titles_list = [game.title for game in self.games]
                 self.gameModsLabel.setText(f"{self.game_label} {self.chosen_game.title}")
@@ -170,7 +245,7 @@ class MainWindow(QMainWindow):
             return
 
         if self.chosen_game.button and not self.game_name_is_set:
-            con = connect_base(self.lang)
+            con = connect_base(self.database_name, self.lang)
             if type(con) == sqlite3.Connection:
                 cur = con.cursor()
                 if game_title not in self.games_titles_list:
@@ -178,6 +253,9 @@ class MainWindow(QMainWindow):
                     self.createGameButton.setEnabled(True)  # new game can be added
                     self.game_name_is_set = True  # app is now functional
                     cur.execute('''INSERT INTO Games(Game_title) VALUES(?)''', (game_title,))  # add to database
+                    game_id = cur.execute(""" SELECT GAME_ID FROM Games
+                                              WHERE Game_title == ? """, (game_title,)).fetchone()
+                    self.chosen_game.id = game_id[0]
                     self.informationText.clear()
                     self.games[-1].title = game_title
                     self.open_mods(new_game=self.chosen_game)
@@ -191,7 +269,7 @@ class MainWindow(QMainWindow):
 
     def delete_game(self) -> None:
         """ Deletes the game from the database and all related widgets and button from the app """
-        con = connect_base(self.lang)
+        con = connect_base(self.database_name, self.lang)
         if type(con) != sqlite3.Connection:
             self.informationText.setText(self.errors_notes['base_connection_failure_when_deleting_game'])
             return
@@ -199,7 +277,7 @@ class MainWindow(QMainWindow):
         if not self.game_name_is_set:
             self.informationText.setText(self.errors_notes['finish_game_init'])
             return
-        
+
         for mod in self.chosen_game.mods:  # delete all game mods from the database and widgets from the layout
             mod.delete()
 
@@ -454,7 +532,16 @@ class MainWindow(QMainWindow):
 
 
 if __name__ == "__main__":
+    database_name = ""
+    for file in listdir('.'):  # parse folder to find any database files
+        if file.endswith((".db", ".sqlite", ".db3", ".sqlite3", ".s3db", ".sl3")):
+            if check_database(file):  # if this base is configured correctly for the app then it will be the app database
+                database_name = (file, 0)  # 0 means old database
+                break
+    if not database_name:
+        create_database()
+        database_name = ("MMT_workbase.sqlite", 1)  # 1 means new database
     app = QApplication(sys.argv)
-    k = MainWindow()
+    k = MainWindow(database_name)
     k.show()
     sys.exit(app.exec())

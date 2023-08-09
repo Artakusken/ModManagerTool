@@ -36,6 +36,7 @@
       "file_dialog_type": "File (*.mod *.txt)"
     },
     "Errors/Notes": {
+      "new_database": "The app couldn't find previous database in the folder. A new database has been created",
       "same_game_title": "Such a tab already exists",
       "choose_game_to_rename_it": "Choose a tab to rename it",
       "finish_game_init": "Name a previously created game to regain the ability to open/delete other games",
@@ -92,6 +93,7 @@
       "file_dialog_type": "Файл (*.mod *.txt)"
     },
     "Errors/Notes": {
+      "new_database": "Приложение не нашло прежнюю базу данных в папке. Была создана новая база данных",
       "same_game_title": "Такая вкладка уже существует",
       "choose_game_to_rename_it": "Для переименования вкладки выберите её",
       "finish_game_init": "Назовите ранее созданную игру, чтобы вернуть способность открывать/удалять другие игры",

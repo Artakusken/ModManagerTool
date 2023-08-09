@@ -1,6 +1,6 @@
 import sqlite3
 import json
-from PyQt5.QtWidgets import QSizePolicy, QWidget, QLabel, QFrame, QPushButton, QPlainTextEdit, QLineEdit, QFileDialog, QRadioButton
+from PyQt5.QtWidgets import QSizePolicy, QWidget, QLabel, QFrame, QPushButton, QPlainTextEdit, QLineEdit, QFileDialog
 from PyQt5.QtGui import QPixmap, QImage
 from PyQt5.QtCore import Qt
 from os import listdir, path
@@ -175,7 +175,7 @@ class ModInfoWidget(QWidget):
 
     def delete(self) -> None:
         """ Deletes modification from the database and widget from the app """
-        con = sqlite3.connect("MMT_workbase.sqlite")
+        con = sqlite3.connect(self.main_window.database_name)
         if not self.check_conn(con):
             self.informationText.setText("Ошибка при подключении к базе данных")
             return
@@ -226,7 +226,7 @@ class ModInfoWidget(QWidget):
 
     def save_into_base(self, old_title: str = "") -> str:
         """ Saves/updates to database """
-        con = sqlite3.connect("MMT_workbase.sqlite")
+        con = sqlite3.connect(self.main_window.database_name)
         if not self.check_conn(con):
             self.informationText.setText("Ошибка при подключении к базе данных")
             return ""
