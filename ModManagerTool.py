@@ -214,6 +214,10 @@ class MainWindow(QMainWindow):
 
     def rename_game_button(self):
         """ Renames game in the database and in the application """
+        if not self.game_name_is_set:
+            self.informationText.setText(self.errors_notes['finish_game_init'])
+            return
+
         new_game_title = self.gameLineEdit.text()  # new title from gameLineEdit
         if self.chosen_game:  # game that will be renamed
             if new_game_title not in self.games_titles_list:  # check repetition
@@ -233,6 +237,7 @@ class MainWindow(QMainWindow):
         new_game_button.clicked.connect(self.open_mods)
         self.games.append(Game(new_game_button))
         self.chosen_game = self.games[-1]
+        # self.renameGameButton.setEnabled(False)  # no new game can be added
         self.createGameButton.setEnabled(False)  # no new game can be added
         self.game_name_is_set = False  # disable app, wait for add_game_button func
 
@@ -251,6 +256,7 @@ class MainWindow(QMainWindow):
                 if game_title not in self.games_titles_list:
                     self.chosen_game.button.setText(game_title)
                     self.createGameButton.setEnabled(True)  # new game can be added
+                    # self.renameGameButton.setEnabled(True)
                     self.game_name_is_set = True  # app is now functional
                     cur.execute('''INSERT INTO Games(Game_title) VALUES(?)''', (game_title,))  # add to database
                     game_id = cur.execute(""" SELECT GAME_ID FROM Games
@@ -336,6 +342,10 @@ class MainWindow(QMainWindow):
 
     def add_blank_mod_widget(self):
         """ Adds new blank mod widget in the app (it's not saved in database yet) """
+        if not self.game_name_is_set:
+            self.informationText.setText(self.errors_notes['finish_game_init'])
+            return
+
         if self.chosen_game:
             new_widget = ModInfoWidget(self.chosen_game, self)
             new_widget.game_id += self.chosen_game.id
@@ -349,6 +359,10 @@ class MainWindow(QMainWindow):
 
     def add_mod_with_info(self, descriptor_file_path: bool = None):
         """ Adds new mod widget with the data from descriptor file in the app (it's not saved in database yet) """
+        if not self.game_name_is_set:
+            self.informationText.setText(self.errors_notes['finish_game_init'])
+            return
+
         if self.chosen_game:
             if not descriptor_file_path:  # creates file dialogue
                 descriptor_file_path = QFileDialog.getOpenFileName(self, self.window_localization["file_dialog_desc"], ".",
@@ -426,6 +440,10 @@ class MainWindow(QMainWindow):
 
     def folder_mods(self):
         """ Parses the folder """
+        if not self.game_name_is_set:
+            self.informationText.setText(self.errors_notes['finish_game_init'])
+            return
+
         if self.chosen_game:  # folder dialogue
             folder_path = QFileDialog.getExistingDirectory(None, self.window_localization["folder_dialog_desc"])
             try:
